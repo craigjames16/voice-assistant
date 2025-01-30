@@ -69,7 +69,7 @@ recognizer = sr.Recognizer()  # Initialize the recognizer
 def generate_beep_file():
     frequency = 880  # A5 note
     duration = 0.1  # seconds
-    sample_rate = 48000
+    sample_rate = 16000
     t = np.linspace(0, duration, int(duration * sample_rate), False)
     note = np.sin(2 * np.pi * frequency * t)
     
