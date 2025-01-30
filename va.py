@@ -156,6 +156,19 @@ def resample_audio(audio_data, original_rate, target_rate):
     resampled = signal.resample(audio_data, new_length)
     return resampled.astype(np.int16)
 
+# Modify the Microphone setup to use the supported sample rate instead of Porcupine's rate
+def create_speech_recognizer(device_index, sample_rate):
+    try:
+        mic = sr.Microphone(
+            device_index=device_index,
+            sample_rate=sample_rate,  # Use the device's supported rate
+            chunk_size=1024  # Use a standard chunk size
+        )
+        return mic
+    except Exception as e:
+        print(f"Error creating speech recognizer: {e}")
+        return None
+
 try:
     while True:
         try:
@@ -199,18 +212,28 @@ try:
                 audio_stream.stop_stream()
                 audio_stream.close()
                 
-                time.sleep(0.5)  # Add a small delay to let the audio system stabilize
+                time.sleep(1.0)  # Increase delay to give more time for audio system to stabilize
                 
                 try:
-                    with sr.Microphone(
-                        sample_rate=porcupine.sample_rate,
-                        chunk_size=porcupine.frame_length,
-                        device_index=default_input_device
-                    ) as source:
-                        recognizer.adjust_for_ambient_noise(source, duration=0.5)
-                        audio = recognizer.listen(source, phrase_time_limit=None)
+                    mic = create_speech_recognizer(default_input_device, supported_sample_rate)
+                    if mic is None:
+                        raise Exception("Failed to create microphone instance")
+                        
+                    with mic as source:
+                        print("Adjusting for ambient noise...")
+                        recognizer.adjust_for_ambient_noise(source, duration=1.0)
+                        print("Listening...")
+                        audio = recognizer.listen(source, timeout=10, phrase_time_limit=None)
                     
-                    # Reopen the stream for hotword detection
+                    print("Processing speech...")
+                    text = recognizer.recognize_google(audio)
+                    print(f"Recognized Text: {text}")
+                    
+                except Exception as e:
+                    print(f"Error during speech recognition: {e}")
+                finally:
+                    # Always ensure we reopen the stream for hotword detection
+                    print("Reinitializing hotword detection...")
                     audio_stream = create_audio_stream(
                         pa,
                         default_input_device,
@@ -222,20 +245,8 @@ try:
                         print("Failed to reinitialize audio stream. Exiting.")
                         sys.exit(1)
                     
-                    # Continue with speech recognition
-                    text = recognizer.recognize_google(audio)
-                    print(f"Recognized Text: {text}")
-                    
-                except Exception as e:
-                    print(f"Error during speech recognition: {e}")
-                    # Ensure we reopen the stream even if there's an error
-                    audio_stream = create_audio_stream(
-                        pa,
-                        default_input_device,
-                        supported_sample_rate,
-                        int(porcupine.frame_length * supported_sample_rate / porcupine.sample_rate)
-                    )
-                    continue
+                    if 'text' not in locals():
+                        continue
 
                 # Use the module-style import and extract just the answer text
                 response = agent.process_query_sync(text)
