@@ -223,14 +223,23 @@ try:
                         print("Adjusting for ambient noise...")
                         recognizer.adjust_for_ambient_noise(source, duration=1.0)
                         print("Listening...")
-                        audio = recognizer.listen(source, timeout=10, phrase_time_limit=None)
-                    
-                    print("Processing speech...")
-                    text = recognizer.recognize_google(audio)
-                    print(f"Recognized Text: {text}")
+                        try:
+                            audio = recognizer.listen(source, timeout=5, phrase_time_limit=10)
+                            print("Processing speech...")
+                            text = recognizer.recognize_google(audio)
+                            print(f"Recognized Text: {text}")
+                        except sr.WaitTimeoutError:
+                            print("No speech detected within timeout period")
+                            continue
+                        except sr.UnknownValueError:
+                            print("Could not understand audio")
+                            continue
+                        except sr.RequestError as e:
+                            print(f"Could not request results; {e}")
+                            continue
                     
                 except Exception as e:
-                    print(f"Error during speech recognition: {e}")
+                    print(f"Error during speech recognition: {str(e)}")
                 finally:
                     # Always ensure we reopen the stream for hotword detection
                     print("Reinitializing hotword detection...")
