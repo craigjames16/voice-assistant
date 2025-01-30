@@ -38,18 +38,29 @@ for i in range(pa.get_device_count()):
     if device_info['maxInputChannels'] > 0:
         default_input_device = i
         print(f"Using device: {device_info['name']}")
+        print(f"Default sample rate: {int(device_info['defaultSampleRate'])}")
         break
 
 if default_input_device is None:
     raise RuntimeError("No input device found")
 
+# Get device info to check supported sample rate
+device_info = pa.get_device_info_by_index(default_input_device)
+supported_sample_rate = int(device_info['defaultSampleRate'])
+
+# Check if the device's sample rate matches Porcupine's required rate
+if supported_sample_rate != porcupine.sample_rate:
+    print(f"Warning: Device sample rate ({supported_sample_rate}) differs from Porcupine's required rate ({porcupine.sample_rate})")
+    # You might need to use a different device or configure your system's audio settings
+
+# Try to open the stream with the supported sample rate
 audio_stream = pa.open(
-    rate=porcupine.sample_rate,
+    rate=supported_sample_rate,
     channels=1,
     format=pyaudio.paInt16,
     input=True,
     frames_per_buffer=porcupine.frame_length * 2,
-    input_device_index=default_input_device  # Use the detected input device
+    input_device_index=default_input_device
 )
 
 recognizer = sr.Recognizer()  # Initialize the recognizer
