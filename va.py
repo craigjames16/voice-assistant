@@ -127,7 +127,9 @@ def speak_text(text):
         
         # Save the audio to a temporary file
         temp_file = "temp_speech.mp3"
-        response.stream_to_file(temp_file)
+        with open(temp_file, 'wb') as f:
+            for chunk in response.iter_bytes():
+                f.write(chunk)
         
         # Cross-platform audio playback
         try:
@@ -137,7 +139,13 @@ def speak_text(text):
             # Fallback for Linux systems if playsound fails
             if os.name == 'posix':
                 try:
-                    subprocess.run(['aplay' if os.system('which aplay') == 0 else 'paplay', temp_file])
+                    # Convert MP3 to WAV first using ffmpeg
+                    wav_file = "temp_speech.wav"
+                    subprocess.run(['ffmpeg', '-y', '-i', temp_file, wav_file], 
+                                 stdout=subprocess.DEVNULL, 
+                                 stderr=subprocess.DEVNULL)
+                    subprocess.run(['aplay' if os.system('which aplay') == 0 else 'paplay', wav_file])
+                    os.remove(wav_file)  # Clean up WAV file
                 except Exception as e:
                     print(f"Fallback audio playback failed: {e}")
         
@@ -240,22 +248,22 @@ try:
                     
                 except Exception as e:
                     print(f"Error during speech recognition: {str(e)}")
-                finally:
-                    # Always ensure we reopen the stream for hotword detection
-                    print("Reinitializing hotword detection...")
-                    audio_stream = create_audio_stream(
-                        pa,
-                        default_input_device,
-                        supported_sample_rate,
-                        int(porcupine.frame_length * supported_sample_rate / porcupine.sample_rate)
-                    )
+                # finally:
+                    # # Always ensure we reopen the stream for hotword detection
+                    # print("Reinitializing hotword detection...")
+                    # audio_stream = create_audio_stream(
+                    #     pa,
+                    #     default_input_device,
+                    #     supported_sample_rate,
+                    #     int(porcupine.frame_length * supported_sample_rate / porcupine.sample_rate)
+                    # )
                     
-                    if audio_stream is None:
-                        print("Failed to reinitialize audio stream. Exiting.")
-                        sys.exit(1)
+                    # if audio_stream is None:
+                    #     print("Failed to reinitialize audio stream. Exiting.")
+                    #     sys.exit(1)
                     
-                    if 'text' not in locals():
-                        continue
+                    # if 'text' not in locals():
+                    #     continue
 
                 # Use the module-style import and extract just the answer text
                 response = agent.process_query_sync(text)
