@@ -10,6 +10,7 @@ from openai import OpenAI  # Add OpenAI import
 import numpy as np
 import wave
 from playsound import playsound
+from scipy import signal  # Add this import at the top
 
 # Load environment variables from .env file
 load_dotenv()
@@ -22,8 +23,6 @@ porcupine = pvporcupine.create(
     access_key=access_key,
     keyword_paths=[keyword_path],
 )
-
-porcupine.sample_rate = 16000
 
 pa = pyaudio.PyAudio()  # Initialize PyAudio first
 
@@ -128,12 +127,29 @@ def speak_text(text):
     except Exception as e:
         print(f"Error in text-to-speech: {e}")
 
+def resample_audio(audio_data, original_rate, target_rate):
+    """Resample audio data to target sample rate."""
+    # Calculate resampling ratio
+    ratio = target_rate / original_rate
+    # Calculate new length
+    new_length = int(len(audio_data) * ratio)
+    # Resample using scipy.signal.resample
+    resampled = signal.resample(audio_data, new_length)
+    return resampled.astype(np.int16)
+
 try:
-    
     while True:
         try:
             pcm = audio_stream.read(porcupine.frame_length, exception_on_overflow=False)
             pcm = struct.unpack_from("h" * porcupine.frame_length, pcm)
+            
+            # Resample if the rates don't match
+            if supported_sample_rate != porcupine.sample_rate:
+                pcm = resample_audio(
+                    np.array(pcm), 
+                    supported_sample_rate, 
+                    porcupine.sample_rate
+                )
 
             keyword_index = porcupine.process(pcm)
             if keyword_index >= 0:
