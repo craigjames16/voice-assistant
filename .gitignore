@@ -41,6 +41,7 @@ notification.wav
 
 agent/credentials.json
 agent/token.json
+token.json
 agent/notification-pluck.mp3
 agent/*.zip
 *.pickle
