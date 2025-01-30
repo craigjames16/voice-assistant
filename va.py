@@ -60,7 +60,7 @@ audio_stream = pa.open(
     channels=1,
     format=pyaudio.paInt16,
     input=True,
-    frames_per_buffer=porcupine.frame_length * 2,
+    frames_per_buffer=int(porcupine.frame_length * supported_sample_rate / porcupine.sample_rate),  # Adjust buffer size
     input_device_index=default_input_device
 )
 
@@ -140,8 +140,10 @@ def resample_audio(audio_data, original_rate, target_rate):
 try:
     while True:
         try:
-            pcm = audio_stream.read(porcupine.frame_length, exception_on_overflow=False)
-            pcm = struct.unpack_from("h" * porcupine.frame_length, pcm)
+            # Calculate required input frames based on sample rate ratio
+            input_frame_length = int(porcupine.frame_length * supported_sample_rate / porcupine.sample_rate)
+            pcm = audio_stream.read(input_frame_length, exception_on_overflow=False)
+            pcm = struct.unpack_from("h" * input_frame_length, pcm)
             
             # Resample if the rates don't match
             if supported_sample_rate != porcupine.sample_rate:
@@ -150,6 +152,12 @@ try:
                     supported_sample_rate, 
                     porcupine.sample_rate
                 )
+                
+            # Ensure we have exactly the number of frames Porcupine expects
+            if len(pcm) > porcupine.frame_length:
+                pcm = pcm[:porcupine.frame_length]
+            elif len(pcm) < porcupine.frame_length:
+                pcm = np.pad(pcm, (0, porcupine.frame_length - len(pcm)))
 
             keyword_index = porcupine.process(pcm)
             if keyword_index >= 0:
