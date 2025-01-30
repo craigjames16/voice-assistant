@@ -21,8 +21,9 @@ keyword_path = os.getenv('KEYWORD_PATH')
 porcupine = pvporcupine.create(
     access_key=access_key,
     keyword_paths=[keyword_path],
-    sample_rate=16000  # Can be 16000, 32000, or 48000
 )
+
+porcupine.sample_rate = 16000
 
 pa = pyaudio.PyAudio()  # Initialize PyAudio first
 
