@@ -17,10 +17,11 @@ load_dotenv()
 access_key = os.getenv('ACCESS_KEY')
 keyword_path = os.getenv('KEYWORD_PATH')
 
-# Initialize Porcupine with the downloaded keyword file
+# Initialize Porcupine with the downloaded keyword file and specified sample rate
 porcupine = pvporcupine.create(
     access_key=access_key,
-    keyword_paths=[keyword_path]
+    keyword_paths=[keyword_path],
+    sample_rate=16000  # Can be 16000, 32000, or 48000
 )
 
 pa = pyaudio.PyAudio()  # Initialize PyAudio first
