@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  voice-assistant:
+    image: 182491688958.dkr.ecr.ca-central-1.amazonaws.com/voice-assistant:latest
+    devices:
+      - "/dev/snd:/dev/snd"
+    environment:
+      - PULSE_SERVER=unix:${XDG_RUNTIME_DIR}/pulse/native
+      - ACCESS_KEY=${ACCESS_KEY}
+      #- KEYWORD_PATH=${KEYWORD_PATH}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes:
+      - ${XDG_RUNTIME_DIR}/pulse/native:${XDG_RUNTIME_DIR}/pulse/native
+      - ~/.config/pulse/cookie:/root/.config/pulse/cookie
