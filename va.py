@@ -201,6 +201,7 @@ def create_speech_recognizer(device_index, sample_rate):
 try:
     while True:
         try:
+            print("Checking audio stream...", audio_stream)
             # Ensure we have an open audio stream
             if audio_stream is None or not audio_stream.is_active():
                 audio_stream = create_audio_stream(
