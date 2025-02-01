@@ -249,12 +249,11 @@ try:
                         except Exception as e:
                             print(f"Fallback audio playback failed: {e}")
 
-                print("Listening for speech...")
                 # Close the existing stream before creating new one
-                audio_stream.stop_stream()
-                audio_stream.close()
+                # audio_stream.stop_stream()
+                # audio_stream.close()
                 
-                time.sleep(1.0)  # Increase delay to give more time for audio system to stabilize
+                # time.sleep(1.0)  # Increase delay to give more time for audio system to stabilize
                 
                 try:
                     mic = create_speech_recognizer(default_input_device, supported_sample_rate)
