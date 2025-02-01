@@ -35,14 +35,17 @@ for i in range(pa.get_device_count()):
     print(f"Device {i}: {device_info['name']}")
 
 # Try to find the default input device
-default_input_device = None
-for i in range(pa.get_device_count()):
-    device_info = pa.get_device_info_by_index(i)
-    if device_info['maxInputChannels'] > 0:
-        default_input_device = i
-        print(f"Using device: {device_info['name']}")
-        print(f"Default sample rate: {int(device_info['defaultSampleRate'])}")
-        break
+default_input_device = 1
+# for i in range(pa.get_device_count()):
+#     device_info = pa.get_device_info_by_index(i)
+#     if device_info['maxInputChannels'] > 0:
+#         default_input_device = i
+#         print(f"Using device: {device_info['name']}")
+#         print(f"Default sample rate: {int(device_info['defaultSampleRate'])}")
+#         break
+device_info = pa.get_device_info_by_index(default_input_device)
+print(f"Using device: {device_info['name']}")
+print(f"Default sample rate: {int(device_info['defaultSampleRate'])}")
 
 if default_input_device is None:
     raise RuntimeError("No input device found")
