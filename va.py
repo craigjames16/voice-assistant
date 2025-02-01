@@ -262,8 +262,8 @@ try:
                         raise Exception("Failed to create microphone instance")
                         
                     with mic as source:
-                        print("Adjusting for ambient noise...")
-                        recognizer.adjust_for_ambient_noise(source, duration=1.0)
+                        # print("Adjusting for ambient noise...")
+                        # recognizer.adjust_for_ambient_noise(source, duration=1.0)
                         print("Listening...")
                         try:
                             audio = recognizer.listen(source, timeout=5, phrase_time_limit=10)
