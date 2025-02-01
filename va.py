@@ -183,6 +183,19 @@ def create_speech_recognizer(device_index, sample_rate):
 try:
     while True:
         try:
+            # Ensure we have an open audio stream
+            if audio_stream is None or not audio_stream.is_active():
+                audio_stream = create_audio_stream(
+                    pa,
+                    default_input_device,
+                    supported_sample_rate,
+                    int(porcupine.frame_length * supported_sample_rate / porcupine.sample_rate)
+                )
+                if audio_stream is None:
+                    print("Failed to create audio stream. Retrying in 1 second...")
+                    time.sleep(1)
+                    continue
+
             # Calculate required input frames based on sample rate ratio
             input_frame_length = int(porcupine.frame_length * supported_sample_rate / porcupine.sample_rate)
             pcm = audio_stream.read(input_frame_length, exception_on_overflow=False)
@@ -279,8 +292,33 @@ try:
                     print(f"Returned Text: {returned_text}")
                     speak_text(returned_text)
 
+                # After speech recognition is complete, reopen the stream for hotword detection
+                audio_stream = create_audio_stream(
+                    pa,
+                    default_input_device,
+                    supported_sample_rate,
+                    int(porcupine.frame_length * supported_sample_rate / porcupine.sample_rate)
+                )
+                if audio_stream is None:
+                    print("Failed to reopen audio stream. Retrying...")
+                    time.sleep(1)
+                    continue
+
         except OSError as e:
-            print(f"Audio input overflowed: {e}")
+            print(f"Audio stream error: {e}")
+            # Close the stream if it exists
+            if audio_stream is not None:
+                try:
+                    audio_stream.stop_stream()
+                    audio_stream.close()
+                except:
+                    pass
+            audio_stream = None
+            time.sleep(1)  # Wait before retrying
+            continue
 finally:
-    audio_stream.close()
+    if audio_stream is not None:
+        audio_stream.stop_stream()
+        audio_stream.close()
     porcupine.delete()
+    pa.terminate()
