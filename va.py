@@ -35,17 +35,14 @@ for i in range(pa.get_device_count()):
     print(f"Device {i}: {device_info['name']}")
 
 # Try to find the default input device
-default_input_device = 1
-# for i in range(pa.get_device_count()):
-#     device_info = pa.get_device_info_by_index(i)
-#     if device_info['maxInputChannels'] > 0:
-#         default_input_device = i
-#         print(f"Using device: {device_info['name']}")
-#         print(f"Default sample rate: {int(device_info['defaultSampleRate'])}")
-#         break
-device_info = pa.get_device_info_by_index(default_input_device)
-print(f"Using device: {device_info['name']}")
-print(f"Default sample rate: {int(device_info['defaultSampleRate'])}")
+default_input_device = None
+for i in range(pa.get_device_count()):
+    device_info = pa.get_device_info_by_index(i)
+    if device_info['maxInputChannels'] > 0:
+        default_input_device = i
+        print(f"Using device: {device_info['name']}")
+        print(f"Default sample rate: {int(device_info['defaultSampleRate'])}")
+        break
 
 if default_input_device is None:
     raise RuntimeError("No input device found")
@@ -128,13 +125,11 @@ def speak_text(text):
             input=text
         )
         
-        # Save the audio to a temporary file
         temp_file = "temp_speech.mp3"
         temp_wav = "temp_speech.wav"
         
-        # Use the correct streaming method
         with open(temp_file, 'wb') as f:
-            response.write_to_file(temp_file)  # Updated from stream_to_file
+            response.write_to_file(temp_file)
         
         # Convert MP3 to WAV first using ffmpeg for Linux systems
         if os.name == 'posix':
@@ -142,20 +137,40 @@ def speak_text(text):
                 subprocess.run(['ffmpeg', '-y', '-i', temp_file, temp_wav], 
                              stdout=subprocess.DEVNULL, 
                              stderr=subprocess.DEVNULL)
-                subprocess.run(['aplay', temp_wav], 
+                # Use -D parameter to specify ALSA device
+                subprocess.run(['aplay', '-D', 'plughw:1,0', temp_wav],  # Modify 1,0 to match your device
                              stdout=subprocess.DEVNULL, 
                              stderr=subprocess.DEVNULL)
                 os.remove(temp_wav)
             except Exception as e:
                 print(f"Error with ffmpeg/aplay: {e}")
         else:
-            # For non-Linux systems, try playsound
             try:
-                playsound(temp_file)
+                # For Windows, we can use the winmm audio backend with device selection
+                import sounddevice as sd
+                import soundfile as sf
+                
+                # Convert MP3 to WAV for sounddevice compatibility
+                subprocess.run(['ffmpeg', '-y', '-i', temp_file, temp_wav],
+                             stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL)
+                
+                # Read the WAV file
+                data, samplerate = sf.read(temp_wav)
+                
+                # Play through specified device (change device number as needed)
+                sd.play(data, samplerate, device=1)  # Modify device number as needed
+                sd.wait()  # Wait until audio is finished playing
+                
+                os.remove(temp_wav)
             except Exception as e:
-                print(f"Error playing audio with playsound: {e}")
+                print(f"Error playing audio: {e}")
+                # Fallback to playsound if sounddevice fails
+                try:
+                    playsound(temp_file)
+                except Exception as e:
+                    print(f"Error playing audio with playsound: {e}")
         
-        # Clean up the temporary file
         os.remove(temp_file)
     except Exception as e:
         print(f"Error in text-to-speech: {e}")
