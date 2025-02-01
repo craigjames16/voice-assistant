@@ -121,33 +121,36 @@ def speak_text(text):
         # Generate speech using OpenAI's TTS
         response = client.audio.speech.create(
             model="tts-1",
-            voice="onyx",  # Options: alloy, echo, fable, onyx, nova, shimmer
+            voice="onyx",
             input=text
         )
         
         # Save the audio to a temporary file
         temp_file = "temp_speech.mp3"
-        with open(temp_file, 'wb') as f:
-            for chunk in response.iter_bytes():
-                f.write(chunk)
+        temp_wav = "temp_speech.wav"
         
-        # Cross-platform audio playback
-        try:
-            playsound(temp_file)
-        except Exception as e:
-            print(f"Error playing audio: {e}")
-            # Fallback for Linux systems if playsound fails
-            if os.name == 'posix':
-                try:
-                    # Convert MP3 to WAV first using ffmpeg
-                    wav_file = "temp_speech.wav"
-                    subprocess.run(['ffmpeg', '-y', '-i', temp_file, wav_file], 
-                                 stdout=subprocess.DEVNULL, 
-                                 stderr=subprocess.DEVNULL)
-                    subprocess.run(['aplay' if os.system('which aplay') == 0 else 'paplay', wav_file])
-                    os.remove(wav_file)  # Clean up WAV file
-                except Exception as e:
-                    print(f"Fallback audio playback failed: {e}")
+        # Use the correct streaming method
+        with open(temp_file, 'wb') as f:
+            response.write_to_file(temp_file)  # Updated from stream_to_file
+        
+        # Convert MP3 to WAV first using ffmpeg for Linux systems
+        if os.name == 'posix':
+            try:
+                subprocess.run(['ffmpeg', '-y', '-i', temp_file, temp_wav], 
+                             stdout=subprocess.DEVNULL, 
+                             stderr=subprocess.DEVNULL)
+                subprocess.run(['aplay', temp_wav], 
+                             stdout=subprocess.DEVNULL, 
+                             stderr=subprocess.DEVNULL)
+                os.remove(temp_wav)
+            except Exception as e:
+                print(f"Error with ffmpeg/aplay: {e}")
+        else:
+            # For non-Linux systems, try playsound
+            try:
+                playsound(temp_file)
+            except Exception as e:
+                print(f"Error playing audio with playsound: {e}")
         
         # Clean up the temporary file
         os.remove(temp_file)
@@ -248,22 +251,7 @@ try:
                     
                 except Exception as e:
                     print(f"Error during speech recognition: {str(e)}")
-                # finally:
-                    # # Always ensure we reopen the stream for hotword detection
-                    # print("Reinitializing hotword detection...")
-                    # audio_stream = create_audio_stream(
-                    #     pa,
-                    #     default_input_device,
-                    #     supported_sample_rate,
-                    #     int(porcupine.frame_length * supported_sample_rate / porcupine.sample_rate)
-                    # )
-                    
-                    # if audio_stream is None:
-                    #     print("Failed to reinitialize audio stream. Exiting.")
-                    #     sys.exit(1)
-                    
-                    # if 'text' not in locals():
-                    #     continue
+
 
                 # Use the module-style import and extract just the answer text
                 response = agent.process_query_sync(text)
