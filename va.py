@@ -201,19 +201,30 @@ def create_speech_recognizer(device_index, sample_rate):
 try:
     while True:
         try:
-            print("Checking audio stream...", audio_stream)
-            # Ensure we have an open audio stream
+            # Check if stream is closed or not active and recreate if necessary
             if audio_stream is None or not audio_stream.is_active():
+                print("Recreating audio stream...")
+                if audio_stream is not None:
+                    try:
+                        audio_stream.stop_stream()
+                        audio_stream.close()
+                    except:
+                        pass
+                
                 audio_stream = create_audio_stream(
                     pa,
                     default_input_device,
                     supported_sample_rate,
                     int(porcupine.frame_length * supported_sample_rate / porcupine.sample_rate)
                 )
+                
                 if audio_stream is None:
-                    print("Failed to create audio stream. Retrying in 1 second...")
-                    time.sleep(1)
+                    print("Failed to create audio stream. Retrying in 2 seconds...")
+                    time.sleep(2)
                     continue
+                
+                # Add a small delay after creating the stream
+                time.sleep(0.5)
 
             # Calculate required input frames based on sample rate ratio
             input_frame_length = int(porcupine.frame_length * supported_sample_rate / porcupine.sample_rate)
@@ -332,7 +343,7 @@ try:
                 except:
                     pass
             audio_stream = None
-            time.sleep(1)  # Wait before retrying
+            time.sleep(2)  # Increased wait time before retrying
             continue
 finally:
     if audio_stream is not None:
