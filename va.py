@@ -304,22 +304,33 @@ try:
                 # Add automatic follow-up listening if required
                 if response.requires_followup:
                     print("Listening for follow-up response...")
-                    with sr.Microphone(
-                        sample_rate=porcupine.sample_rate,
-                        chunk_size=porcupine.frame_length,
-                        device_index=default_input_device
-                    ) as source:
-                        recognizer.adjust_for_ambient_noise(source, duration=0.5)
-                        audio = recognizer.listen(source, phrase_time_limit=None)
-                    
-                    follow_up_text = recognizer.recognize_google(audio)
-                    print(f"Follow-up response: {follow_up_text}")
-                    
-                    # Process the follow-up response
-                    follow_up_response = agent.process_query_sync(follow_up_text)
-                    returned_text = follow_up_response.answer
-                    print(f"Returned Text: {returned_text}")
-                    speak_text(returned_text)
+                    try:
+                        mic = create_speech_recognizer(default_input_device, supported_sample_rate)
+                        if mic is None:
+                            raise Exception("Failed to create microphone instance for follow-up")
+                            
+                        with mic as source:
+                            print("Adjusting for ambient noise...")
+                            recognizer.adjust_for_ambient_noise(source, duration=0.5)
+                            print("Listening for follow-up...")
+                            try:
+                                audio = recognizer.listen(source, timeout=5, phrase_time_limit=10)
+                                follow_up_text = recognizer.recognize_google(audio)
+                                print(f"Follow-up response: {follow_up_text}")
+                                
+                                # Process the follow-up response
+                                follow_up_response = agent.process_query_sync(follow_up_text)
+                                returned_text = follow_up_response.answer
+                                print(f"Returned Text: {returned_text}")
+                                speak_text(returned_text)
+                            except sr.WaitTimeoutError:
+                                print("No follow-up speech detected within timeout period")
+                            except sr.UnknownValueError:
+                                print("Could not understand follow-up audio")
+                            except sr.RequestError as e:
+                                print(f"Could not request results for follow-up; {e}")
+                    except Exception as e:
+                        print(f"Error during follow-up speech recognition: {str(e)}")
 
                 # After speech recognition is complete, reopen the stream for hotword detection
                 audio_stream = create_audio_stream(
