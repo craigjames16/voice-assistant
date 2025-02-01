@@ -250,8 +250,8 @@ try:
                             print(f"Fallback audio playback failed: {e}")
 
                 # Close the existing stream before creating new one
-                # audio_stream.stop_stream()
-                # audio_stream.close()
+                audio_stream.stop_stream()
+                audio_stream.close()
                 
                 # time.sleep(1.0)  # Increase delay to give more time for audio system to stabilize
                 
